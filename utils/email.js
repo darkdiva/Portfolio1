@@ -1,30 +1,50 @@
-const nodemailer = require('nodemailer');
+const https = require('https');
 
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
+const sendEmail = (to, subject, html, replyTo) => {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      from: 'Portfolio Contact <onboarding@resend.dev>',
+      to: [to],
+      subject,
+      html,
+      ...(replyTo && { reply_to: replyTo }),
+    });
+
+    const options = {
+      hostname: 'api.resend.com',
+      port: 443,
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        const parsed = JSON.parse(data);
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(parsed);
+        } else {
+          reject(new Error(`Resend error: ${data}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
   });
 };
 
 const sendContactNotification = async ({ name, email, subject, message }) => {
-  // Log credentials status (not the actual values)
-  console.log('📧 Email attempt:', {
-    userSet: !!process.env.GMAIL_USER,
-    passSet: !!process.env.GMAIL_APP_PASSWORD,
-    passLength: process.env.GMAIL_APP_PASSWORD ? process.env.GMAIL_APP_PASSWORD.length : 0,
-    notifyEmail: process.env.NOTIFY_EMAIL,
-  });
+  console.log('📧 Sending via Resend...');
 
-  const transporter = createTransporter();
-
-  // Verify connection first
-  await transporter.verify();
-  console.log('✅ Gmail transporter verified');
-
+  // 1. Notification to Assil
   const notificationHtml = `
     <!DOCTYPE html>
     <html>
@@ -44,15 +64,15 @@ const sendContactNotification = async ({ name, email, subject, message }) => {
     </html>
   `;
 
-  await transporter.sendMail({
-    from: `"Portfolio Contact" <${process.env.GMAIL_USER}>`,
-    to: process.env.NOTIFY_EMAIL,
-    subject: `📬 [Portfolio] ${subject} — from ${name}`,
-    html: notificationHtml,
-    replyTo: email,
-  });
-  console.log('✅ Notification email sent');
+  await sendEmail(
+    process.env.NOTIFY_EMAIL,
+    `📬 [Portfolio] ${subject} — from ${name}`,
+    notificationHtml,
+    email
+  );
+  console.log('✅ Notification sent to', process.env.NOTIFY_EMAIL);
 
+  // 2. Auto-reply to sender
   const autoReplyHtml = `
     <!DOCTYPE html>
     <html>
@@ -69,18 +89,17 @@ const sendContactNotification = async ({ name, email, subject, message }) => {
           <strong>Assil Mhadhbi</strong><br>
           <span style="color:#6688aa;font-size:13px;">SOC Trainee · Aspiring Cybersecurity Specialist · Tunis, Tunisia</span>
         </div>
-        <p style="color:#8899aa;font-size:12px;">This is an automated reply. © ${new Date().getFullYear()} Assil Mhadhbi</p>
+        <p style="color:#8899aa;font-size:12px;">© ${new Date().getFullYear()} Assil Mhadhbi</p>
       </div>
     </body>
     </html>
   `;
 
-  await transporter.sendMail({
-    from: `"Assil Mhadhbi" <${process.env.GMAIL_USER}>`,
-    to: email,
-    subject: `Thanks for reaching out, ${name}! 👋`,
-    html: autoReplyHtml,
-  });
+  await sendEmail(
+    email,
+    `Thanks for reaching out, ${name}! 👋`,
+    autoReplyHtml
+  );
   console.log('✅ Auto-reply sent to', email);
 };
 
