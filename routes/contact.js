@@ -53,7 +53,7 @@ router.post('/', contactLimiter, validateContact, async (req, res) => {
     return res.status(201).json({
       success: true,
       message: emailSent
-        ? "Message received! I've also sent you a confirmation email."
+        ? "Message received! I'll get back to you as soon as possible."
         : 'Message received! (Email notification failed but your message is saved.)',
     });
 
