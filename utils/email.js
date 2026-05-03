@@ -42,9 +42,8 @@ const sendEmail = (to, subject, html, replyTo) => {
 };
 
 const sendContactNotification = async ({ name, email, subject, message }) => {
-  console.log('📧 Sending via Resend...');
+  console.log('📧 Sending notification via Resend...');
 
-  // 1. Notification to Assil
   const notificationHtml = `
     <!DOCTYPE html>
     <html>
@@ -71,36 +70,6 @@ const sendContactNotification = async ({ name, email, subject, message }) => {
     email
   );
   console.log('✅ Notification sent to', process.env.NOTIFY_EMAIL);
-
-  // 2. Auto-reply to sender
-  const autoReplyHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="UTF-8"></head>
-    <body style="font-family:Arial,sans-serif;background:#f5f8ff;color:#1a2a3a;padding:20px;">
-      <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-        <div style="background:linear-gradient(135deg,#050a0f,#0d1a26);padding:24px;border-radius:8px;text-align:center;margin-bottom:24px;">
-          <h1 style="color:#00b4ff;margin:0;">AM.</h1>
-          <p style="color:#8ab0cc;margin:8px 0 0;font-size:14px;">Assil Mhadhbi — Security Specialist Aspirant</p>
-        </div>
-        <p>Hi <strong style="color:#0077bb;">${name}</strong>,</p>
-        <p>Thank you for reaching out! I've received your message and will get back to you within 24–48 hours.</p>
-        <div style="border-left:3px solid #00b4ff;padding:12px 16px;background:#f0f6ff;margin:20px 0;border-radius:0 8px 8px 0;">
-          <strong>Assil Mhadhbi</strong><br>
-          <span style="color:#6688aa;font-size:13px;">SOC Trainee · Aspiring Cybersecurity Specialist · Tunis, Tunisia</span>
-        </div>
-        <p style="color:#8899aa;font-size:12px;">© ${new Date().getFullYear()} Assil Mhadhbi</p>
-      </div>
-    </body>
-    </html>
-  `;
-
-  await sendEmail(
-    email,
-    `Thanks for reaching out, ${name}! 👋`,
-    autoReplyHtml
-  );
-  console.log('✅ Auto-reply sent to', email);
 };
 
 module.exports = { sendContactNotification };
